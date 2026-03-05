@@ -10,34 +10,49 @@ import {
   doc,
   updateDoc,
   serverTimestamp,
-  Timestamp
+  Timestamp,
 } from "firebase/firestore";
 
 type Task = {
   id: string;
   text: string;
   completed: boolean;
+  priority: string;
+  category: string;
+  dueDate?: Timestamp | null;
   createdAt?: Timestamp;
 };
 
 export default function Home() {
-  const [task, setTask] = useState<string>("");
+  const categories = ["Kerja", "Kuliah", "Pribadi", "Belanja"];
+
+  const [task, setTask] = useState("");
+  const [priority, setPriority] = useState("low");
+  const [category, setCategory] = useState("Kerja");
+  const [dueDate, setDueDate] = useState("");
   const [tasks, setTasks] = useState<Task[]>([]);
 
   const taskCollection = collection(db, "tasks");
 
   useEffect(() => {
     const unsubscribe = onSnapshot(taskCollection, (snapshot) => {
-      const taskList: Task[] = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...(doc.data() as Omit<Task, "id">),
-      }));
-
+      const taskList: Task[] = snapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          text: data.text || "",
+          completed: data.completed || false,
+          priority: data.priority || "low",
+          category: data.category || "Kerja",
+          dueDate: data.dueDate || null,
+          createdAt: data.createdAt || null,
+        };
+      });
       setTasks(taskList);
     });
 
     return () => unsubscribe();
-  }, [taskCollection]);
+  }, []);
 
   const tambahTask = async () => {
     if (!task.trim()) return;
@@ -45,10 +60,16 @@ export default function Home() {
     await addDoc(taskCollection, {
       text: task,
       completed: false,
+      priority,
+      category,
+      dueDate: dueDate ? Timestamp.fromDate(new Date(dueDate)) : null,
       createdAt: serverTimestamp(),
     });
 
     setTask("");
+    setPriority("low");
+    setCategory("Kerja");
+    setDueDate("");
   };
 
   const toggleTask = async (id: string, completed: boolean) => {
@@ -62,51 +83,108 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-gray-100 flex justify-center items-center">
-      <div className="bg-white shadow-xl rounded-2xl p-8 w-full max-w-md">
-        <h1 className="text-2xl font-bold mb-6 text-center text-black">
-          🚀 Realtime To-Do App
+    <main className="min-h-screen bg-gradient-to-br from-black via-gray-900 to-blue-900 flex justify-center items-center p-6">
+      <div className="backdrop-blur-xl bg-white/10 border border-white/20 shadow-2xl rounded-3xl p-8 w-full max-w-md text-white">
+
+        <h1 className="text-3xl font-bold text-center mb-8 tracking-wide">
+          ⚡ To Do List
         </h1>
 
-        <div className="flex gap-2 mb-6">
+        {/* INPUT SECTION */}
+        <div className="space-y-4 mb-8">
           <input
             value={task}
             onChange={(e) => setTask(e.target.value)}
-            className="flex-1 border rounded-lg px-3 py-2 text-black"
+            className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-400 placeholder-gray-300"
             placeholder="Tambah tugas..."
           />
+
+          {/* PRIORITY */}
+          <select
+            value={priority}
+            onChange={(e) => setPriority(e.target.value)}
+            className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 focus:outline-none"
+          >
+            <option value="low" className="text-black">Low</option>
+            <option value="medium" className="text-black">Medium</option>
+            <option value="high" className="text-black">High</option>
+          </select>
+
+          {/* CATEGORY DROPDOWN */}
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 focus:outline-none"
+          >
+            {categories.map((cat) => (
+              <option key={cat} value={cat} className="text-black">{cat}</option>
+            ))}
+          </select>
+
+          <input
+            type="date"
+            value={dueDate}
+            onChange={(e) => setDueDate(e.target.value)}
+            className="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 focus:outline-none"
+          />
+
           <button
             onClick={tambahTask}
-            className="bg-blue-500 text-black px-4 rounded-lg"
+            className="w-full bg-blue-500 hover:bg-blue-600 transition-all duration-300 py-3 rounded-xl font-semibold tracking-wide shadow-lg shadow-blue-500/40"
           >
-            +
+            + Tambah Task
           </button>
         </div>
 
-        <div className="space-y-3">
+        {/* TASK LIST */}
+        <div className="space-y-4">
           {tasks.map((item) => (
             <div
               key={item.id}
-              className="flex justify-between items-center bg-gray-50 p-3 rounded-lg"
+              className="bg-white/10 border border-white/20 rounded-2xl p-4 hover:bg-white/20 transition-all duration-300 shadow-lg"
             >
-              <span
-                onClick={() => toggleTask(item.id, item.completed)}
-                className={`cursor-pointer text-black ${
-                  item.completed ? "line-through" : ""
-                }`}
-              >
-                {item.text}
-              </span>
+              <div className="flex justify-between items-center mb-2">
+                <span
+                  onClick={() => toggleTask(item.id, item.completed)}
+                  className={`cursor-pointer text-lg font-medium ${
+                    item.completed ? "line-through text-gray-400" : "text-white"
+                  }`}
+                >
+                  {item.text}
+                </span>
 
-              <button
-                onClick={() => hapusTask(item.id)}
-                className="text-black"
-              >
-                ❌
-              </button>
+                <button
+                  onClick={() => hapusTask(item.id)}
+                  className="text-red-400 hover:text-red-600 transition"
+                >
+                  ❌
+                </button>
+              </div>
+
+              <div className="flex justify-between text-sm">
+                <span className={`px-3 py-1 rounded-full text-xs font-semibold
+                  ${
+                    item.priority === "high"
+                      ? "bg-red-500/30 text-red-400"
+                      : item.priority === "medium"
+                      ? "bg-yellow-500/30 text-yellow-400"
+                      : "bg-green-500/30 text-green-400"
+                  }`}>
+                  ⚡ {item.priority.toUpperCase()}
+                </span>
+
+                <span>📁 {item.category}</span>
+              </div>
+
+              {item.dueDate && typeof item.dueDate.toDate === "function" && (
+                <div className="text-xs text-gray-400 mt-2">
+                  📅 {item.dueDate.toDate().toLocaleDateString()}
+                </div>
+              )}
             </div>
           ))}
         </div>
+
       </div>
     </main>
   );
