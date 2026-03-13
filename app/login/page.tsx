@@ -12,34 +12,34 @@ export default function LoginPage() {
   const [password, setPassword] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
 
- async function handleLogin() {
-  if (!email || !password) {
-    alert("Email dan Password harus diisi");
-    return;
+  async function handleLogin() {
+    if (!email || !password) {
+      alert("Email dan Password harus diisi");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+
+      console.log("User:", userCredential.user);
+
+      alert("Login berhasil ✅");
+
+      router.push("/");
+
+    } catch (error) {
+      console.error(error);
+      alert("Login gagal ❌");
+    } finally {
+      setLoading(false);
+    }
   }
-
-  try {
-    setLoading(true);
-
-    const userCredential = await signInWithEmailAndPassword(
-      auth,
-      email,
-      password
-    );
-
-    console.log("User:", userCredential.user);
-
-    alert("Login berhasil ✅");
-
-    router.push("/");
-
-  } catch (error) {
-    console.error(error);
-    alert("Login gagal ❌");
-  } finally {
-    setLoading(false);
-  }
-}
 
   return (
     <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-black via-gray-900 to-blue-900">
@@ -75,6 +75,17 @@ export default function LoginPage() {
           >
             {loading ? "Loading..." : "Login"}
           </button>
+
+          {/* 🔥 REGISTER LINK */}
+          <p className="text-center text-sm text-gray-300 mt-4">
+            Belum punya akun?{" "}
+            <span
+              onClick={() => router.push("/register")}
+              className="text-green-400 cursor-pointer hover:underline"
+            >
+              Register
+            </span>
+          </p>
 
         </div>
 
